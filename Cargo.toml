@@ -11,4 +11,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.91"
 tokio = { version = "1.23.0", features = ["full"] }
 tower-http = { version = "0.3.5", features = ["cors"] }
-sqlx = { version = "0.6.2", features = ["runtime-tokio-rustls", "any", "postgres"]}
+tower-lsp = "0.18.0"
+async-tungstenite = { version = "0.18", features = ["tokio-runtime"] }
+tracing-subscriber = "0.3"
+ws_stream_tungstenite = { version = "0.9", features = ["tokio_io"] }
+tracing = "0.1"
+#sqlx = { version = "0.6.2", features = ["runtime-tokio-rustls", "any", "postgres"]}
