@@ -375,6 +375,7 @@ dependencies = [
  "tokio",
  "tower-http",
  "tower-lsp",
+ "tower-service",
  "tracing",
  "tracing-subscriber",
  "ws_stream_tungstenite",
