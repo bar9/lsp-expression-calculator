@@ -1,47 +1,33 @@
-use tokio::net::TcpListener;
-use tower_lsp::jsonrpc::Result;
-use tower_lsp::lsp_types::*;
-use tower_lsp::{Client, LanguageServer, LspService, Server};
-use async_tungstenite::tokio::accept_async;
-use tracing::info;
-use ws_stream_tungstenite::*;
-
-#[derive(Debug)]
-struct Backend {
-    client: Client,
-}
-
-#[tower_lsp::async_trait]
-impl LanguageServer for Backend {
-    async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
-        Ok(InitializeResult::default())
-    }
-
-    async fn initialized(&self, _: InitializedParams) {
-        self.client
-            .log_message(MessageType::INFO, "server initialized!")
-            .await;
-    }
-
-    async fn shutdown(&self) -> Result<()> {
-        Ok(())
-    }
-}
+use axum::extract::WebSocketUpgrade;
+use axum::extract::ws::WebSocket;
+use axum::response::IntoResponse;
+use axum::Router;
+use axum::routing::get;
 
 #[tokio::main]
 async fn main() {
-    #[cfg(feature = "runtime-agnostic")]
-    use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
+    let app = Router::new()
+        .route("/ws", get(handler));
+    axum::Server::bind(&"127.0.0.1:3000".parse().unwrap())
+        .serve(app.into_make_service())
+        .await
+        .unwrap()
+}
 
-    tracing_subscriber::fmt().init();
+async fn handler(ws: WebSocketUpgrade) -> impl IntoResponse {
+    ws.on_upgrade(handle_socket)
+}
 
-    let listener = TcpListener::bind("127.0.0.1:9257").await.unwrap();
-    info!("Listening on {}", listener.local_addr().unwrap());
-    let (stream, _) = listener.accept().await.unwrap();
-    let (read, write) = tokio::io::split(WsStream::new(accept_async(stream).await.unwrap()));
-    #[cfg(feature = "runtime-agnostic")]
-        let (read, write) = (read.compat(), write.compat_write());
+async fn handle_socket(mut socket: WebSocket) {
+   while let Some(msg) = socket.recv().await {
+       let msg = if let Ok(msg) = msg {
+           msg
+       } else {
+           return;
+       };
 
-    let (service, socket) = LspService::new(|client| Backend { client });
-    Server::new(read, write, socket).serve(service).await;
+       if socket.send(msg).await.is_err() {
+           return;
+       }
+   }
 }

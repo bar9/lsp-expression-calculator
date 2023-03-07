@@ -9,12 +9,14 @@
   "type": "module",
   "dependencies": {
     "@monaco-editor/react": "^4.4.6",
+    "monaco-editor-workers": "^0.36.0",
     "monaco-languageclient": "^4.0.3",
     "normalize-url": "^8.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "util": "^0.12.5",
-    "vscode": "^1.1.37",
+    "vscode": "npm:@codingame/monaco-vscode-api@^1.69.22",
+    "vscode-ws-jsonrpc": "^2.0.2",
     "ws": "^8.12.1"
   },
   "devDependencies": {
@@ -27,6 +29,7 @@
     "@types/prettier": "^2.7.1",
     "@types/react": "^18.0.21",
     "@types/react-dom": "^18.0.6",
+    "@types/vscode": "^1.75.1",
     "@types/ws": "^8.5.4",
     "@typescript-eslint/eslint-plugin": "^5.38.0",
     "@typescript-eslint/parser": "^5.38.0",

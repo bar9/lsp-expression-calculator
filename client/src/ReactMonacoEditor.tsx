@@ -1,34 +1,40 @@
-// import 'monaco-editor/esm/vs/editor/editor.all.js';
+/* --------------------------------------------------------------------------------------------
+ * from https://github.com/TypeFox/monaco-languageclient/tree/main/packages/examples/main/src/react
+ * ------------------------------------------------------------------------------------------ */
+import 'monaco-editor/esm/vs/editor/editor.all.js';
 
 // support all editor features
-// import 'monaco-editor/esm/vs/editor/standalone/browser/accessibilityHelp/accessibilityHelp.js';
-// import 'monaco-editor/esm/vs/editor/standalone/browser/inspectTokens/inspectTokens.js';
-// import 'monaco-editor/esm/vs/editor/standalone/browser/iPadShowKeyboard/iPadShowKeyboard.js';
-// import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneHelpQuickAccess.js';
-// import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoLineQuickAccess.js';
-// import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoSymbolQuickAccess.js';
-// import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js';
-// import 'monaco-editor/esm/vs/editor/standalone/browser/quickInput/standaloneQuickInputService.js';
-// import 'monaco-editor/esm/vs/editor/standalone/browser/referenceSearch/standaloneReferenceSearch.js';
-// import 'monaco-editor/esm/vs/editor/standalone/browser/toggleHighContrast/toggleHighContrast.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/accessibilityHelp/accessibilityHelp.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/inspectTokens/inspectTokens.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/iPadShowKeyboard/iPadShowKeyboard.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneHelpQuickAccess.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoLineQuickAccess.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoSymbolQuickAccess.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickInput/standaloneQuickInputService.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/referenceSearch/standaloneReferenceSearch.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/toggleHighContrast/toggleHighContrast.js';
 
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js';
 
-// import { buildWorkerDefinition } from 'monaco-editor-workers';
+import { buildWorkerDefinition } from 'monaco-editor-workers';
 
-import { CloseAction, ErrorAction, MessageTransports, MonacoLanguageClient, MonacoServices } from 'monaco-languageclient';
-
+import { MonacoLanguageClient, MonacoServices } from 'monaco-languageclient';
 import normalizeUrl from 'normalize-url';
-// import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
-import { StandaloneServices } from 'vscode/services';
-import getMessageServiceOverride from 'vscode/service-override/messages';
-
+import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
 import React, { createRef, useEffect, useMemo, useRef } from 'react';
+import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient';
+
+import { StandaloneServices } from 'vscode/services';
+import getNotificationServiceOverride from 'vscode/service-override/notifications';
+import getDialogServiceOverride from 'vscode/service-override/dialogs';
+
+buildWorkerDefinition('../../../node_modules/monaco-editor-workers/dist/workers/', new URL('', window.location.href).href, false);
 
 StandaloneServices.initialize({
-  ...getMessageServiceOverride(document.body)
+  ...getNotificationServiceOverride(document.body),
+  ...getDialogServiceOverride()
 });
-// buildWorkerDefinition('dist', new URL('', window.location.href).href, false);
 
 export type EditorProps = {
   defaultCode: string;
@@ -87,8 +93,8 @@ export type Tester<P = {}> = React.FunctionComponent<P> & {
 export const ReactMonacoEditor: React.FC<EditorProps> = ({
                                                            defaultCode,
                                                            hostname = 'localhost',
-                                                           path = '/',
-                                                           port = '9257',
+                                                           path = '/ws',
+                                                           port = '3000',
                                                            className
                                                          }) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>();
@@ -119,7 +125,6 @@ export const ReactMonacoEditor: React.FC<EditorProps> = ({
       // install Monaco language client services
       MonacoServices.install();
 
-      debugger;
       lspWebSocket = createWebSocket(url);
 
       return () => {

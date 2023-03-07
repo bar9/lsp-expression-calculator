@@ -1,17 +1,20 @@
 import React from "react";
 import ReactDOM from "react-dom";
 
-import Editor from "@monaco-editor/react";
+import {ReactMonacoEditor} from "./ReactMonacoEditor";
+import {createRoot} from "react-dom/client";
 
 function App() {
   return (
-    <Editor
-      height="90vh"
-      defaultLanguage="javascript"
-      defaultValue="// some comment"
+    <ReactMonacoEditor
+      // height="90vh"
+      // defaultLanguage="javascript"
+      defaultCode="// some comment"
     />
   );
 }
 
 const rootElement = document.getElementById("root");
-ReactDOM.render(<App />, rootElement);
+// @ts-ignore
+const root = createRoot(rootElement);
+root.render(<App/>);
