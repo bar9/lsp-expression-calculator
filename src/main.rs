@@ -1,3 +1,5 @@
+extern crate core;
+
 use std::io;
 use axum::extract::WebSocketUpgrade;
 use axum::extract::ws::Message::Text;
@@ -5,10 +7,11 @@ use axum::extract::ws::{Message, WebSocket};
 use axum::response::IntoResponse;
 use axum::{Error, Router};
 use axum::routing::get;
-use serde_json::Value;
+use serde_json::{from_str, Map, Value};
 use tower_lsp::{LanguageServer, LspService};
 use tower_lsp::jsonrpc::{Request, RequestBuilder, Response, Result};
-use tower_lsp::lsp_types::{CompletionItem, CompletionOptions, CompletionParams, CompletionResponse, DidChangeConfigurationParams, DidChangeTextDocumentParams, DidChangeWatchedFilesParams, DidChangeWorkspaceFoldersParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams, ExecuteCommandOptions, ExecuteCommandParams, InitializedParams, InitializeParams, InitializeResult, MessageType, OneOf, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, WorkspaceEdit, WorkspaceFoldersServerCapabilities, WorkspaceServerCapabilities};
+use tower_lsp::lsp_types::{CompletionItem, CompletionOptions, CompletionParams, CompletionResponse, DidChangeConfigurationParams, DidChangeTextDocumentParams, DidChangeWatchedFilesParams, DidChangeWorkspaceFoldersParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams, ExecuteCommandOptions, ExecuteCommandParams, Hover, HoverContents, HoverParams, HoverProviderCapability, InitializedParams, InitializeParams, InitializeResult, MarkedString, MessageType, OneOf, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, WorkspaceEdit, WorkspaceFoldersServerCapabilities, WorkspaceServerCapabilities};
+use tower_lsp::lsp_types::notification::Initialized;
 use tower_service::Service;
 
 #[tokio::main]
@@ -29,14 +32,11 @@ impl LanguageServer for Backend {
         Ok(InitializeResult {
             server_info: None,
             capabilities: ServerCapabilities {
+                hover_provider: Some(HoverProviderCapability::Simple(true)),
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::INCREMENTAL,
                 )),
-                completion_provider: Some(CompletionOptions {
-                    resolve_provider: Some(false),
-                    trigger_characters: Some(vec![".".to_string()]),
-                    ..Default::default()
-                }),
+                completion_provider: Some(CompletionOptions::default()),
                 execute_command_provider: Some(ExecuteCommandOptions {
                     commands: vec!["dummy.do_something".to_string()],
                     ..Default::default()
@@ -55,6 +55,8 @@ impl LanguageServer for Backend {
     }
 
     async fn initialized(&self, _: InitializedParams) {
+        // Ok(Some(Initialized))
+        // Ok(Some(Initialized)
         // self.client
         //     .log_message(MessageType::INFO, "initialized!")
         //     .await;
@@ -64,67 +66,20 @@ impl LanguageServer for Backend {
         Ok(())
     }
 
-    async fn did_change_workspace_folders(&self, _: DidChangeWorkspaceFoldersParams) {
-        // self.client
-        //     .log_message(MessageType::INFO, "workspace folders changed!")
-        //     .await;
-    }
-
-    async fn did_change_configuration(&self, _: DidChangeConfigurationParams) {
-        // self.client
-        //     .log_message(MessageType::INFO, "configuration changed!")
-        //     .await;
-    }
-
-    async fn did_change_watched_files(&self, _: DidChangeWatchedFilesParams) {
-        // self.client
-        //     .log_message(MessageType::INFO, "watched files have changed!")
-        //     .await;
-    }
-
-    async fn execute_command(&self, _: ExecuteCommandParams) -> Result<Option<Value>> {
-        // self.client
-        //     .log_message(MessageType::INFO, "command executed!")
-        //     .await;
-
-        // match self.client.apply_edit(WorkspaceEdit::default()).await {
-        //     Ok(res) if res.applied => self.client.log_message(MessageType::INFO, "applied").await,
-        //     Ok(_) => self.client.log_message(MessageType::INFO, "rejected").await,
-        //     Err(err) => self.client.log_message(MessageType::ERROR, err).await,
-        // }
-
-        Ok(None)
-    }
-
-    async fn did_open(&self, _: DidOpenTextDocumentParams) {
-        // self.client
-        //     .log_message(MessageType::INFO, "file opened!")
-        //     .await;
-    }
-
-    async fn did_change(&self, _: DidChangeTextDocumentParams) {
-        // self.client
-        //     .log_message(MessageType::INFO, "file changed!")
-        //     .await;
-    }
-
-    async fn did_save(&self, _: DidSaveTextDocumentParams) {
-        // self.client
-        //     .log_message(MessageType::INFO, "file saved!")
-        //     .await;
-    }
-
-    async fn did_close(&self, _: DidCloseTextDocumentParams) {
-        // self.client
-        //     .log_message(MessageType::INFO, "file closed!")
-        //     .await;
-    }
-
     async fn completion(&self, _: CompletionParams) -> Result<Option<CompletionResponse>> {
         Ok(Some(CompletionResponse::Array(vec![
             CompletionItem::new_simple("Hello".to_string(), "Some detail".to_string()),
             CompletionItem::new_simple("Bye".to_string(), "More detail".to_string()),
         ])))
+    }
+
+    async fn hover(&self, _: HoverParams) -> Result<Option<Hover>> {
+        Ok(Some(Hover {
+            contents: HoverContents::Scalar(
+                MarkedString::String("You're hovering!".to_string())
+            ),
+            range: None
+        }))
     }
 }
 
@@ -138,14 +93,21 @@ async fn handle_socket(mut socket: WebSocket) {
     let (mut service, _) = LspService::new(|_| Backend);
 
     while let Some(msg) = socket.recv().await {
+        let mut method = String::from("");
         let res = if let Ok(Text(msg)) = msg {
             let deserialized = serde_json::from_value::<Request>(msg.clone().parse().unwrap());
             if let Ok(deserialized) = deserialized {
+                method = deserialized.method().to_string();
                 // println!("{:?}", deserialized);
-                let res = service.call(deserialized).await.unwrap();
-                println!("{:?}", res);
-                res
+                if let Ok(res) = service.call(deserialized).await {
+                    println!("{:?}", res);
+                    res
+                } else {
+                //     println!("{}", "ERROR: LSP call failed");
+                    return;
+                }
             } else {
+            //     println!("{}", "ERROR: recv failed");
                 return;
             }
             // println!("{:?}", deserialized);
@@ -156,16 +118,34 @@ async fn handle_socket(mut socket: WebSocket) {
             //     .unwrap();
             // Text(msg)
         } else {
+        //     println!("{}", "ERROR: recv failed");
             return;
         };
 
-        println!("{:?}", String::from(res.unwrap()));
 
-        // if let Some(Text(res)) = res {
-        //     if socket.send(Message::from(res)).await.is_err() {
-        //         return;
-        //     }
-        // }
+        if let Some(res) = res {
+            println!("{:?}", res);
+            if let Some(result) = res.result() {
+                let result = result.to_string();
+                let mut map = Map::new();
+                map.insert(String::from("id"), Value::Number(res.id().to_string().parse().unwrap()));
+                map.insert(String::from("jsonrpc"), Value::String(String::from("2.0")));
+                map.insert(String::from("result"), from_str(&result[..]).unwrap());
+                // map.insert(String::from("method"), Value::String(method));
+                let obj = Value::Object(map);
+                // map.insert("method", Value::String(String::from(res)));
+                if socket.send(Message::Text(obj.to_string())).await.is_err() {
+                    println!("{}", "ERROR: send failed");
+                    // return
+                }
+            }
+            // println!("{:?}", res);
+            // if socket.send(Message::from(res)).await.is_err() {
+            //     return;
+            // }
+        } else {
+            // return;
+        }
     }
 }
 
