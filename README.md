@@ -6,8 +6,8 @@ configurator, where editing configuration feels just like normal coding.
 ## current step: POC
 - [x] monaco editor in frontend (from ...)
 - [x] tower-lsp in backend  (from ...)
-- [ ] frontend and backend talk to each other via Websocket
-- [ ] backend defines autocomplete variables
+- [x] frontend and backend talk to each other via Websocket
+- [x] backend defines autocomplete variables
 - [ ] syntax inspections according to some expression language
 
 ## Usage
