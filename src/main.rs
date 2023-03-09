@@ -54,22 +54,20 @@ impl LanguageServer for Backend {
         })
     }
 
-    async fn initialized(&self, _: InitializedParams) {
-        // Ok(Some(Initialized))
-        // Ok(Some(Initialized)
-        // self.client
-        //     .log_message(MessageType::INFO, "initialized!")
-        //     .await;
-    }
-
     async fn shutdown(&self) -> Result<()> {
         Ok(())
     }
 
     async fn completion(&self, _: CompletionParams) -> Result<Option<CompletionResponse>> {
         Ok(Some(CompletionResponse::Array(vec![
-            CompletionItem::new_simple("Hello".to_string(), "Some detail".to_string()),
-            CompletionItem::new_simple("Bye".to_string(), "More detail".to_string()),
+            CompletionItem::new_simple("SUM_ROW".to_string(), "A row summing up other fields in the same column".to_string()),
+            CompletionItem::new_simple("VALUE_ROW".to_string(), "A row of values stored under a name in a variable".to_string()),
+            CompletionItem::new_simple("CASH_FLOW_FROM_OPERATIONS".to_string(), "user defined variable".to_string()),
+            CompletionItem::new_simple("NET_EARNINGS".to_string(), "user defined variable".to_string()),
+            CompletionItem::new_simple("ADDITIONS_TO_CASH".to_string(), "user defined variable".to_string()),
+            CompletionItem::new_simple("SUBTRACTIONS_FROM_CASH".to_string(), "user defined variable".to_string()),
+            CompletionItem::new_simple("MONEY".to_string(), "Money format".to_string()),
+            CompletionItem::new_simple("NUMBER".to_string(), "Plain decimal format".to_string()),
         ])))
     }
 
@@ -88,8 +86,6 @@ async fn handler(ws: WebSocketUpgrade) -> impl IntoResponse {
 }
 
 async fn handle_socket(mut socket: WebSocket) {
-    // const language_server: LspService<S> = create_language_server();
-    //TODO construct the server here, call it with .call()
     let (mut service, _) = LspService::new(|_| Backend);
 
     while let Some(msg) = socket.recv().await {
@@ -98,54 +94,32 @@ async fn handle_socket(mut socket: WebSocket) {
             let deserialized = serde_json::from_value::<Request>(msg.clone().parse().unwrap());
             if let Ok(deserialized) = deserialized {
                 method = deserialized.method().to_string();
-                // println!("{:?}", deserialized);
                 if let Ok(res) = service.call(deserialized).await {
-                    println!("{:?}", res);
                     res
                 } else {
-                //     println!("{}", "ERROR: LSP call failed");
                     return;
                 }
             } else {
-            //     println!("{}", "ERROR: recv failed");
                 return;
             }
-            // println!("{:?}", deserialized);
-            // if let Text(text) = msg.clone() {
-            //     println!("{:?}", text);
-            // }
-            //     .await
-            //     .unwrap();
-            // Text(msg)
         } else {
-        //     println!("{}", "ERROR: recv failed");
             return;
         };
 
 
         if let Some(res) = res {
-            println!("{:?}", res);
             if let Some(result) = res.result() {
                 let result = result.to_string();
                 let mut map = Map::new();
                 map.insert(String::from("id"), Value::Number(res.id().to_string().parse().unwrap()));
                 map.insert(String::from("jsonrpc"), Value::String(String::from("2.0")));
                 map.insert(String::from("result"), from_str(&result[..]).unwrap());
-                // map.insert(String::from("method"), Value::String(method));
                 let obj = Value::Object(map);
-                // map.insert("method", Value::String(String::from(res)));
                 if socket.send(Message::Text(obj.to_string())).await.is_err() {
                     println!("{}", "ERROR: send failed");
-                    // return
+                    return;
                 }
             }
-            // println!("{:?}", res);
-            // if socket.send(Message::from(res)).await.is_err() {
-            //     return;
-            // }
-        } else {
-            // return;
         }
     }
 }
-
